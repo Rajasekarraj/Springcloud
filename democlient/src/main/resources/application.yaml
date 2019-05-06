@@ -1,0 +1,2 @@
+server:
+  port: 8112    #default port where the service will be started

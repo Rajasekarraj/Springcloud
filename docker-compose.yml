@@ -1,0 +1,79 @@
+version: "2.3"
+services:
+  eureka-server:
+    build:
+      context: ./demo-eureka
+      dockerfile: Dockerfile
+    ports:
+      - "8761:8761"
+    networks:
+      - boot
+    container_name: eureka-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+  
+  zuul-gateway:
+    build:
+      context: ./demo-zuul
+      dockerfile: Dockerfile
+    ports:
+     - "8081:8081"
+    networks:
+     - boot
+    container_name: zuul
+    depends_on:
+      eureka-server:
+          condition: service_healthy
+
+  config-server:
+    build:
+      context: ./demotest
+      dockerfile: Dockerfile
+    ports:
+     - "8888:8888"
+    networks:
+     - boot
+    restart: always
+    container_name: config-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/info"]
+      interval: 40s
+      timeout: 10s
+      retries: 4
+    depends_on: 
+      eureka-server:
+          condition: service_healthy
+
+  config-server-client:
+    build:
+      context: ./democlient
+      dockerfile: Dockerfile
+    ports:
+     - "8112:8112"
+    networks:
+     - boot
+    container_name: config-server-client
+    depends_on: 
+      config-server:
+          condition: service_healthy
+      eureka-server:
+          condition: service_healthy
+
+  express-vip:
+    build:
+      context: ./node-eureka
+      dockerfile: Dockerfile
+    ports:
+      - "8450:8450"
+    networks:
+      - boot
+    container_name: express-vip
+    depends_on:
+      eureka-server:
+          condition: service_healthy
+
+networks:
+  boot:
